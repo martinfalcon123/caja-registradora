@@ -3,6 +3,7 @@ import ProductList from "./component/listaProducto";
 import Cart from "./component/Cart";
 import Ticket from "./component/Ticket";
 
+
 const initialProducts = [
   { id: 1, name: "Remera", price: 1200, stock: 10 },
   { id: 2, name: "Pantalón", price: 2500, stock: 5 },
