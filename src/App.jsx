@@ -102,7 +102,7 @@ export default function App() {
   return (
     <div style={{ maxWidth: "900px", margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ textAlign: "center", color: "#317773", marginBottom: "2rem" }}>
-        Tienda de Ropa
+        Mi primera APP
       </h1>
 
       <ProductList products={products} onAddToCart={handleAddToCart} />
