@@ -1,136 +1,77 @@
+// src/App.jsx
 import React, { useState, useEffect } from "react";
-import ProductList from "./component/listaProducto";
-import Cart from "./component/Cart";
-import Ticket from "./component/Ticket";
+import TaskList from "./component/TaskList";
+import TaskForm from "./component/TaskForm";
 
-
-const initialProducts = [
-  { id: 1, name: "Remera", price: 1200, stock: 10 },
-  { id: 2, name: "Pantalón", price: 2500, stock: 5 },
-  { id: 3, name: "Campera", price: 4200, stock: 3 },
-  { id: 4, name: "Zapatillas", price: 5500, stock: 7 },
-];
-
-export default function App() {
-  const [products, setProducts] = useState(initialProducts);
-  const [cartItems, setCartItems] = useState(() => {
-    // Cargar carrito guardado en localStorage al iniciar
-    const saved = localStorage.getItem("cartItems");
+function App() {
+  // Estado principal para tareas
+  const [tasks, setTasks] = useState(() => {
+    // Cargar tareas guardadas en localStorage o iniciar vacío
+    const saved = localStorage.getItem("tasks");
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [showTicket, setShowTicket] = useState(false);
-
-  // Guardar carrito en localStorage cada vez que cambie
+  // Guardar tareas en localStorage cada vez que cambian
   useEffect(() => {
-    localStorage.setItem("cartItems", JSON.stringify(cartItems));
-  }, [cartItems]);
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
-  const handleAddToCart = (product) => {
-    // Solo agregar si hay stock disponible
-    const productInStock = products.find(p => p.id === product.id);
-    if (!productInStock || productInStock.stock === 0) return;
+  // Programar notificación 30 minutos antes de la tarea
+  const scheduleNotification = (task) => {
+    const taskDateTime = new Date(`${task.date}T${task.time}`);
+    const notifyBeforeMs = 30 * 60 * 1000; // 30 minutos antes
 
-    // Actualizar carrito
-    setCartItems((prev) => {
-      const exists = prev.find(item => item.id === product.id);
-      if (exists) {
-        // Si ya está en carrito, sumo cantidad pero sin superar stock
-        return prev.map(item =>
-          item.id === product.id && item.quantity < productInStock.stock
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        // Si no está, agregar nuevo con cantidad 1
-        return [...prev, { ...product, quantity: 1 }];
-      }
-    });
+    const notifyTime = taskDateTime.getTime() - notifyBeforeMs;
+    const now = Date.now();
 
-    // Reducir stock en productos
-    setProducts((prev) =>
-      prev.map(p =>
-        p.id === product.id && p.stock > 0
-          ? { ...p, stock: p.stock - 1 }
-          : p
-      )
-    );
-  };
+    const delay = notifyTime - now;
 
-  const handleRemoveFromCart = (id) => {
-    // Buscar item a remover para liberar stock
-    const itemToRemove = cartItems.find(item => item.id === id);
-    if (!itemToRemove) return;
-
-    // Actualizar carrito: disminuir cantidad o eliminar
-    setCartItems((prev) => {
-      const item = prev.find(i => i.id === id);
-      if (item.quantity === 1) {
-        return prev.filter(i => i.id !== id);
-      } else {
-        return prev.map(i =>
-          i.id === id ? { ...i, quantity: i.quantity - 1 } : i
-        );
-      }
-    });
-
-    // Aumentar stock en productos
-    setProducts((prev) =>
-      prev.map(p =>
-        p.id === id
-          ? { ...p, stock: p.stock + 1 }
-          : p
-      )
-    );
-  };
-
-  const handleShowTicket = () => {
-    if (cartItems.length === 0) {
-      alert("El carrito está vacío.");
-      return;
+    if (delay > 0) {
+      setTimeout(() => {
+        if (Notification.permission === "granted") {
+          new Notification("Recordatorio de tarea", {
+            body: `${task.title} a las ${task.time}`,
+            icon: "/icon-192.png", // pon un icono aquí
+          });
+        }
+      }, delay);
     }
-    setShowTicket(true);
   };
 
-  const handleCloseTicket = () => {
-    setShowTicket(false);
-    // Opcional: vaciar carrito después de cerrar ticket
-    setCartItems([]);
-    setProducts(initialProducts); // Restaurar stock original
+  // Agregar nueva tarea + notificación
+  const addTask = (task) => {
+    setTasks((prev) => [...prev, task]);
+    scheduleNotification(task);
   };
+
+  // Marcar tarea como completada o no
+  const toggleComplete = (id) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  // Eliminar tarea
+  const deleteTask = (id) => {
+    setTasks((prev) => prev.filter((task) => task.id !== id));
+  };
+
+  // Solicitar permiso de notificaciones al cargar app
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   return (
-    <div style={{ maxWidth: "900px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1 style={{ textAlign: "center", color: "#317773", marginBottom: "2rem" }}>
-        para mi amor 
-      </h1>
-
-      <ProductList products={products} onAddToCart={handleAddToCart} />
-
-      <Cart cartItems={cartItems} onRemoveFromCart={handleRemoveFromCart} />
-
-      <button
-        onClick={handleShowTicket}
-        style={{
-          backgroundColor: "#a3d2ca",
-          color: "#317773",
-          border: "none",
-          borderRadius: "5px",
-          padding: "0.7rem 1.5rem",
-          fontWeight: "bold",
-          cursor: "pointer",
-          marginBottom: "3rem",
-          display: "block",
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}
-      >
-        Generar Ticket
-      </button>
-
-      {showTicket && (
-        <Ticket cartItems={cartItems} onClose={handleCloseTicket} />
-      )}
+    <div style={{ maxWidth: 600, margin: "auto", padding: 20, fontFamily: "Arial" }}>
+      <h1>Agenda de Tareas</h1>
+      <TaskForm onAddTask={addTask} />
+      <TaskList tasks={tasks} onToggleComplete={toggleComplete} onDelete={deleteTask} />
     </div>
   );
 }
+
+export default App;
